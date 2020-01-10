@@ -1,0 +1,2 @@
+add_executable(test_authenticate src/test_info.cpp)
+target_link_libraries(test_authenticate fido2)
