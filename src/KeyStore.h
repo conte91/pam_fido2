@@ -4,11 +4,13 @@
 #include <string>
 #include <vector>
 
+#include "Credential.h"
+
 class KeyStore {
 	public:
 	KeyStore(const std::string& username);
-	std::vector<std::string> list_keys() const;
-	void add_key(const std::string& key);
+	std::vector<Credential> list_keys() const;
+	void add_key(const Credential& cred);
 
 	private:
 	std::string _username;

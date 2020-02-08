@@ -8,13 +8,9 @@
 
 void show_keys(const KeyStore& ks) {
 	for (const auto& k : ks.list_keys()) {
-		std::cout << "Key: ";
-		std::ostringstream ss;
-		for (char c : k) {
-			ss << std::hex << std::setw(2) << std::setfill('0');
-			ss << (int)(unsigned char)c << " ";
-		}
-		std::cout << ss.str() << "\n";
+		std::cout << "Credential ID: " << Hex::encode(k.cred_id);
+		std::cout << ", key: " << Hex::encode(k.pubkey);
+		std::cout << "\n";
 	}
 }
 
@@ -28,7 +24,13 @@ int main(int argc, char** argv) {
 		if (key == "q") {
 			break;
 		}
-		ks.add_key(Hex::decode(key));
+		std::cout << "Add pubkey, or (q): ";
+		std::string pubkey;
+		std::cin >> pubkey;
+		if (pubkey == "q") {
+			break;
+		}
+		ks.add_key({Hex::decode(key), Hex::decode(pubkey)});
 	}
 	return 0;
 }

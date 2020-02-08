@@ -26,6 +26,10 @@ struct StoredCredential {
 		auto sig_len = fido_cred_sig_len(cred);
 		sig = std::string(sig_ptr, sig_ptr + sig_len);
 	}
+
+	Credential getCredential() const {
+		return Credential{cred_id, pubkey};
+	}
 };
 
 #endif

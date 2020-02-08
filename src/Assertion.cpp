@@ -1,6 +1,19 @@
 #include "Assertion.h"
 
 #include <cstring>
+#include <memory>
+
+static void _delete_cred(fido_cred_t* ptr) {
+	fido_cred_free(&ptr);
+};
+
+typedef std::unique_ptr<fido_cred_t, decltype(&_delete_cred)> CredPtr;
+
+static CredPtr _fido_cred_from_authdata(const std::string& data) {
+	CredPtr credential(fido_cred_new(), &_delete_cred);
+	fido_cred_set_authdata(credential.get(), (const unsigned char *)data.data(), data.size());
+	return credential;
+}
 
 namespace Assertion {
 
@@ -22,9 +35,15 @@ Assertion::Assertion(const fido_assert_t* cred, size_t idx) {
 	} else {
 		user_name = nullptr;
 	}
+	//auto verify_status = fido_assert_verify(cred, idx);
+	//verified = verify_status == FIDO_OK;
 	auto auth_ptr = fido_assert_authdata_ptr(cred, idx);
 	auto auth_len = fido_assert_authdata_len(cred, idx);
-	auth_data = AuthData{std::string(auth_ptr, auth_ptr + auth_len)};
+	//if (auth_ptr) {
+	//this->cred_data = std::make_shared<AttestedCredData>(std::string(auth_ptr, auth_ptr + auth_len));
+	//} else {
+	//this->cred_data = nullptr;
+	//}
 }
 
 std::vector<Assertion> Assertion::parseGetAssertionResponse(const fido_assert_t* assert) {
@@ -36,52 +55,23 @@ std::vector<Assertion> Assertion::parseGetAssertionResponse(const fido_assert_t*
 	return result;
 }
 
-static size_t _parseAttestedCredData(AttestedCredData* att, const std::string& data) {
-	size_t len = data.size();
-	size_t len_remaining = len;
-	if (len < 18) {
-		throw std::runtime_error("Attempted to parse credential data of length < 18 (len: " + std::to_string(len) + ").");
-	}
-	uint8_t* pos = (uint8_t*)data.data();
-	memcpy(att->aaguid.data(), pos, 16);
-	pos += 16;
-	len_remaining -= 16;
-
-	/* Length is stored big endian. */
-	uint16_t cred_len = *pos++;
-	cred_len <<= 8;
-	cred_len |= *pos++;
-	len_remaining -= 2;
-	if (cred_len > len_remaining) {
-		throw std::runtime_error("No space left for credential of length " + std::to_string(cred_len) + " (remaining bytes: " + std::to_string(len_remaining) + ").");
-	}
-	att->cred_id.assign((const char*)pos, cred_len);
-	pos += cred_len;
-	return (char *)pos - data.data();
-}
-
 AttestedCredData::AttestedCredData(const std::string& data) {
-	(void)_parseAttestedCredData(this, data);
+	auto credential = _fido_cred_from_authdata(data);
+	auto ci_ptr = fido_cred_id_ptr(credential.get());
+	auto ci_len = fido_cred_id_len(credential.get());
+	std::string cid{ci_ptr, ci_ptr + ci_len};
+	auto pubkey_ptr = fido_cred_pubkey_ptr(credential.get());
+	auto pubkey_len = fido_cred_pubkey_len(credential.get());
+	std::string pk{pubkey_ptr, pubkey_ptr + pubkey_len};
+	_cred = Credential{cid, pk};
+
+	//auto aaguid_ptr = fido_cred_aaguid_ptr(credential.get());
+	//auto aaguid_len = fido_cred_aaguid_len(credential.get());
+	//cred_id.assign(aaguid_ptr, aaguid_ptr + aaguid_len);
 }
 
+#if 0
 AuthData::AuthData(const std::string& data) {
-	size_t len = data.size();
-	size_t len_remaining = len;
-
-	static constexpr int FLAGS_UP = 1 << 0;
-	static constexpr int FLAGS_UV = 1 << 2;
-	static constexpr int FLAGS_ATT_DATA_PRESENT = 1 << 6;
-	static constexpr int FLAGS_EXT_DATA_PRESENT = 1 << 7;
-
-	if (len < 37) {
-		throw std::runtime_error("Attempted to parse authenticator data of length < 37 (len: " + std::to_string(len) + ").");
-	}
-	uint8_t* pos = (uint8_t*)data.data();
-	memcpy(rp_id_hash.data(), pos, 32);
-	pos += 32;
-	len_remaining -= 32;
-
-	uint8_t flags = *pos++;
 	user_present = flags & FLAGS_UP;
 	user_verified = flags & FLAGS_UV;
 	bool att_data_present = flags & FLAGS_ATT_DATA_PRESENT;
@@ -98,5 +88,15 @@ AuthData::AuthData(const std::string& data) {
 		pos += _parseAttestedCredData(cred_data.get(), data.substr((char *)pos - data.data()));
 	}
 }
+bool Assertion::verify(const Credential& cred) {
+	if (!cred_data) {
+		std::cout << "(No credential data)\n";
+		return false;
+	}
+	auto credential = _fido_cred_from_authdata(data);
+	fido_cred_set_id(credential.
+	return fido_assert_verify(credential.get(), ) == FIDO_OK;
+}
+#endif
 
 }

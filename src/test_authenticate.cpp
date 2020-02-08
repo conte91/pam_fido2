@@ -89,7 +89,7 @@ static StoredCredential _register_credential(std::shared_ptr<fido_dev_t> dev) {
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to set user option: ") + fido_strerr(r));
 	}
-	r = fido_dev_make_cred(dev.get(), cred_ptr,NULL);
+	r = fido_dev_make_cred(dev.get(), cred_ptr,"XXXX");
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to register credential: ") + fido_strerr(r));
 	}
@@ -114,7 +114,7 @@ static void do_register_credential(std::shared_ptr<fido_dev_t> dev) {
 		std::cout << "Cred ID (len " << result.cred_id.size() << "): " << dump_hex(result.cred_id) << "\n";
 		std::cout << "Cred pubkey (len " << result.pubkey.size() << "): " << dump_hex(result.pubkey) << "\n";
 		std::cout << "Cred signature (len " << result.sig.size() << "): " << dump_hex(result.sig) << "\n";
-		KeyStore("simo").add_key(result.cred_id);
+		KeyStore("simo").add_key(result.getCredential());
 		std::cout << "Success!\n";
 	} catch (std::runtime_error& e) {
 		std::cerr << "Error while registering credential: " << e.what() << "\n";
@@ -155,34 +155,36 @@ static bool do_auth(std::shared_ptr<fido_dev_t> dev, bool include_allow_list) {
 	}
 	if (include_allow_list) {
 		for (const auto& cred : allowed_keys) {
-			r = fido_assert_allow_cred(assert, (const unsigned char*)cred.data(), cred.size());
+			r = fido_assert_allow_cred(assert, (const unsigned char*)cred.cred_id.data(), cred.cred_id.size());
 			if (r != FIDO_OK) {
 				std::cerr << "Failed to include credential: " << fido_strerr(r) << "\n";
 				return false;
 			}
 		}
 	}
-	r = fido_dev_get_assert(dev.get(), assert, NULL);
+	r = fido_dev_get_assert(dev.get(), assert, "XXXX");
 	if (r != FIDO_OK) {
 		std::cerr << "Failed to authenticate credential: " << fido_strerr(r) << "\n";
 		return false;
 	}
-	auto assertions = Assertion::Assertion::parseGetAssertionResponse(assert);
-	for (const auto& a : assertions) {
-		auto cred_data = a.auth_data.cred_data;
-		if (!cred_data) {
-			std::cout << "(No credential data)\n";
-			continue;
-		}
-		std::cout << "Key provided credential: " << Hex::encode(cred_data->cred_id) << "\n";
-		if (cred_data &&
-			std::find(
-				allowed_keys.begin(), allowed_keys.end(), cred_data->cred_id
-			) != allowed_keys.end()) {
-			std::cout << "Authentication successful with credential ";
-			std::cout << Hex::encode(cred_data->cred_id) << ", sign count ";
-			std::cout << a.auth_data.sign_count << "\n";
-			return true;
+	//auto assertions = Assertion::Assertion::parseGetAssertionResponse(assert);
+	//for (const auto& a : assertions) {
+	for (int i = 0; i < fido_assert_count(assert); ++i) {
+		//auto cred_data = a.cred_data;
+		//if (!cred_data) {
+		//continue;
+		//}
+		//std::cout << "Key provided credential: " << Hex::encode(cred_data->cred_id) << "\n";
+		for (auto& k : allowed_keys) {
+			std::cout << "Attempting key" << Hex::encode(k.pubkey) << "\n";
+			auto verify_result = fido_assert_verify(assert, i, COSE_ES256 /* TODO */, k.pubkey.data()/*to_libfido2_key().get()*/);
+			if (verify_result == FIDO_OK) {
+			//if (a.verify(k)) {
+				std::cout << "Authentication successful with credential ";
+				std::cout << Hex::encode(k.cred_id) << ", sign count ";
+				//std::cout << a.cred_data->sign_count << "\n";
+				return true;
+			}
 		}
 	}
 	std::cout << "No valid credential found :(\n";
