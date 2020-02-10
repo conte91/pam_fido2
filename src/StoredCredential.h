@@ -1,11 +1,22 @@
 #ifndef _STORED_CREDENTIAL_H
 #define _STORED_CREDENTIAL_H
 
+/**
+ * Resident key registered by an authenticator.
+ */
 struct StoredCredential {
+	/**
+	 * Hash of the serialized client data,
+	 * constructed by the client.
+	 */
 	std::string client_data_hash;
+	/** Raw authenticator data. */
 	std::string cred_auth_data;
+	/** Registered credential ID. */
 	std::string cred_id;
+	/** Public key. */
 	std::string pubkey;
+	/** Signature. */
 	std::string sig;
 
 	StoredCredential() = default;

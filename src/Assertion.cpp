@@ -3,6 +3,8 @@
 #include <cstring>
 #include <memory>
 
+#include "hex.h"
+
 static void _delete_cred(fido_cred_t* ptr) {
 	fido_cred_free(&ptr);
 };
