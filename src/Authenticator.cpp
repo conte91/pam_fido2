@@ -160,13 +160,3 @@ StoredCredential Authenticator::make_credential(const HostId& host, const UserId
 	return stored;
 }
 
-std::vector<std::shared_ptr<fido_dev_t>> Authenticator::list_devs() {
-	constexpr int max_devs = 128;
-	auto delete_devlist = [max_devs](fido_dev_t* dev) {
-		fido_dev_info_free(&dev, max_devs);
-	};
-	std::unique_ptr<fido_dev_t*, decltype(delete_devlist)> devlist(fido_dev_info_new(max_devs), delete_devlist);
-	if (devlist) {
-		throw std::runtime_error("fido_dev_info_new failed.\n");
-	}
-}

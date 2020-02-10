@@ -12,6 +12,7 @@
 
 #include "Assertion.h"
 #include "Authenticator.h"
+#include "FidoDevList.h"
 #include "KeyStore.h"
 #include "hex.h"
 #include "StoredCredential.h"
@@ -92,28 +93,20 @@ static void do_exit(Authenticator& dev) {
 }
 
 int main(void) {
-	size_t ndevs;
-	int r;
-
 	fido_init(0);
 
-	auto devlist = Authenticator::list_devs();
-
-	if ((r = fido_dev_info_manifest(devlist, 64, &ndevs)) != FIDO_OK) {
-		std::cerr << "fido_dev_info_manifest: " << fido_strerr(r) << "(" << r << ")" << "\n";
-		return 2;
-	}
+	FidoDevList dev_list{};
 
 	const fido_dev_info_t* selected_dev = nullptr;
-	if (ndevs == 0) {
+	if (dev_list.size() == 0) {
 		std::cerr << "No valid FIDO2 devices found.\n";
 		return -1;
-	} else if (ndevs > 1) {
+	} else if (dev_list.size() > 1) {
 		while (!selected_dev) {
 			/* More than 1 device found. Present a menu to decide which device to use. */
-			std::cout << "Select the device to use [0-" << ndevs - 1 << "] or (q)uit:\n";
-			for (size_t i = 0; i < ndevs; i++) {
-				const fido_dev_info_t *di = fido_dev_info_ptr(devlist, i);
+			std::cout << "Select the device to use [0-" << dev_list.size() - 1 << "] or (q)uit:\n";
+			for (size_t i = 0; i < dev_list.size(); i++) {
+				const fido_dev_info_t *di = dev_list.get(i);
 				std::cout << "\t " << i << ") " << dev_info_str(di) << "\n";
 			}
 			std::string str;
@@ -125,14 +118,14 @@ int main(void) {
 			std::istringstream in(str);
 			size_t sel;
 			in >> sel;
-			if (!in.fail() && sel >= 0 && sel < ndevs) {
-				selected_dev = fido_dev_info_ptr(devlist, sel);
+			if (!in.fail() && sel >= 0 && sel < dev_list.size()) {
+				selected_dev = dev_list.get(sel);
 			} else {
 				std::cout << "Invalid selection.\n";
 			}
 		}
 	} else {
-		selected_dev = fido_dev_info_ptr(devlist, 0);
+		selected_dev = dev_list.get(0);
 	}
 	std::cout << "Using device: [" << dev_info_str(selected_dev) << "]\n";
 
@@ -168,7 +161,6 @@ int main(void) {
 		}
 		callbacks[sel].cb(dev_handle);
 	}
-	fido_dev_info_free(&devlist, ndevs);
 
 	return 0;
 }

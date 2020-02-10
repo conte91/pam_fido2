@@ -14,7 +14,7 @@ class Authenticator {
 	std::unique_ptr<fido_dev_t, void(*)(fido_dev_t*)> _dev;
 	
 	public:
-	Authenticator(std::shared_ptr<fido_dev_info_t> dev_info);
+	Authenticator(const fido_dev_info_t* dev);
 	bool authenticate(const KeyStore& keystore, bool include_allow_list);
 	/**
 	 * Registers a new credential on the device.
