@@ -15,7 +15,7 @@ void show_keys(const KeyStore& ks) {
 }
 
 int main(int argc, char** argv) {
-	KeyStore ks{"simo"};
+	KeyStore ks{UserId{"simo"}};
 	while (1) {
 		show_keys(ks);
 		std::cout << "Add key, or (q): ";

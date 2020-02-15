@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <unistd.h>
+
 /**
  * Left trim a string - thanks C++
  *
@@ -27,4 +29,13 @@ std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r ");
  */
 std::string& trim(std::string& str, const std::string& chars = "\t\n\v\f\r ");
 
+class ChangeEUID {
+	public:
+	/* Changes EUID for the current scope. */
+	ChangeEUID(uid_t euid);
+	/* Restores the EUID changed by this object. */
+	~ChangeEUID();
+	private:
+	uid_t _old_euid;
+};
 #endif // __UTIL_H

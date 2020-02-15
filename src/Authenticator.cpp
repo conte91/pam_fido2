@@ -66,7 +66,7 @@ bool Authenticator::authenticate(const KeyStore& keystore, bool include_allow_li
 		std::cerr << "Failed to set UV flag: " << fido_strerr(r) << "\n";
 		return false;
 	}
-	r = fido_assert_set_rp(assert.get(), "ttclabs.me");
+	r = fido_assert_set_rp(assert.get(), "hans");
 	if (r != FIDO_OK) {
 		std::cerr << "Failed to set client data hash: " << fido_strerr(r) << "\n";
 		return false;
@@ -85,14 +85,14 @@ bool Authenticator::authenticate(const KeyStore& keystore, bool include_allow_li
 			}
 		}
 	}
-	r = fido_dev_get_assert(_dev.get(), assert.get(), "XXXX");
+	r = fido_dev_get_assert(_dev.get(), assert.get(), PIN);
 	if (r != FIDO_OK) {
 		std::cerr << "Failed to authenticate credential: " << fido_strerr(r) << "\n";
 		return false;
 	}
 	//auto assertions = Assertion::Assertion::parseGetAssertionResponse(assert);
 	//for (const auto& a : assertions) {
-	for (int i = 0; i < fido_assert_count(assert.get()); ++i) {
+	for (size_t i = 0; i < fido_assert_count(assert.get()); ++i) {
 		//auto cred_data = a.cred_data;
 		//if (!cred_data) {
 		//continue;
@@ -152,7 +152,7 @@ StoredCredential Authenticator::make_credential(const HostId& host, const UserId
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to set user option: ") + fido_strerr(r));
 	}
-	r = fido_dev_make_cred(_dev.get(), cred_ptr,"XXXX");
+	r = fido_dev_make_cred(_dev.get(), cred_ptr, PIN);
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to register credential: ") + fido_strerr(r));
 	}

@@ -46,7 +46,7 @@ static std::string dump_hex(const std::string& buf) {
 
 static const std::string DEFAULT_CRED_FILE = "./cred.fido2";
 
-static void do_register_credential(Authenticator& dev) {
+static void _register_credential(Authenticator& dev, bool resident_key) {
 	try {
 		std::cout << "File in which to save the credential? [" << DEFAULT_CRED_FILE << "] ";
 		std::string out_file;
@@ -55,7 +55,7 @@ static void do_register_credential(Authenticator& dev) {
 		if (out_file == "") {
 			out_file = DEFAULT_CRED_FILE;
 		}
-		UserId user = {"simo", 1001, "Simone Baratta"};
+		UserId user{getuid()};
 		HostId host = {"hans", "Computer di simo."};
 		StoredCredential result = dev.make_credential(host, user, false);
 		std::cout << "Auth data (len " << result.cred_id.size() << "): " << dump_hex(result.cred_id) << "\n";
@@ -63,15 +63,23 @@ static void do_register_credential(Authenticator& dev) {
 		std::cout << "Cred ID (len " << result.cred_id.size() << "): " << dump_hex(result.cred_id) << "\n";
 		std::cout << "Cred pubkey (len " << result.pubkey.size() << "): " << dump_hex(result.pubkey) << "\n";
 		std::cout << "Cred signature (len " << result.sig.size() << "): " << dump_hex(result.sig) << "\n";
-		KeyStore("simo").add_key(result.getCredential());
+		KeyStore(UserId(getuid())).add_key(result.getCredential());
 		std::cout << "Success!\n";
 	} catch (std::runtime_error& e) {
 		std::cerr << "Error while registering credential: " << e.what() << "\n";
 	}
 }
 
+static void do_register_credential(Authenticator& dev) {
+	_register_credential(dev, true);
+}
+
+static void do_get_u2f_credential(Authenticator& dev) {
+	_register_credential(dev, false);
+}
+
 static void do_auth(Authenticator& dev, bool include_allow_list) {
-	if (dev.authenticate(KeyStore{"simo"}, true)) {
+	if (dev.authenticate(KeyStore{UserId{"simo"}}, include_allow_list)) {
 		std::cout << "Authentication successful :)\n";
 	} else {
 		std::cout << "Authentication failed.\n";
@@ -135,9 +143,10 @@ int main(void) {
 		std::string description;
 		decltype(&do_register_credential) cb;
 	};
-	std::array<CallbackData, 4> callbacks{
+	std::array<CallbackData, 5> callbacks{
 		"Quit", &do_exit,
 		"Register new credential", &do_register_credential,
+		"Obtain new credential (U2F)", &do_get_u2f_credential,
 		"Authenticate", &do_auth_credential,
 		"Verify keys (aka U2F)", &do_auth_allow
 	};
