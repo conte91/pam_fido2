@@ -71,3 +71,4 @@ std::string KeyStore::get_user_config_path() const {
 std::string KeyStore::get_user_keys_file() const {
 	return get_user_config_path() + "/keys";
 }
+

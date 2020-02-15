@@ -57,7 +57,7 @@ static void _register_credential(Authenticator& dev, bool resident_key) {
 		}
 		UserId user{getuid()};
 		HostId host = {"hans", "Computer di simo."};
-		StoredCredential result = dev.make_credential(host, user, false);
+		StoredCredential result = dev.make_credential(host, user, resident_key);
 		std::cout << "Auth data (len " << result.cred_id.size() << "): " << dump_hex(result.cred_id) << "\n";
 		std::cout << "Client data hash (len " << result.client_data_hash.size() << "): " << dump_hex(result.client_data_hash) << "\n";
 		std::cout << "Cred ID (len " << result.cred_id.size() << "): " << dump_hex(result.cred_id) << "\n";

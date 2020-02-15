@@ -11,7 +11,7 @@
  * @param str String to trim
  * @param chars Characters to remove.
  */
-std::string& ltrim(std::string& str, const std::string& chars = "\t\n\v\f\r ");
+std::string ltrim(const std::string& str, const std::string& chars = "\t\n\v\f\r ");
 
 /**
  * Right trim a string - thanks C++
@@ -19,7 +19,7 @@ std::string& ltrim(std::string& str, const std::string& chars = "\t\n\v\f\r ");
  * @param str String to trim
  * @param chars Characters to remove.
  */
-std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r ");
+std::string rtrim(const std::string& str, const std::string& chars = "\t\n\v\f\r ");
 
 /**
  * Trim a string - thanks C++
@@ -27,7 +27,7 @@ std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r ");
  * @param str String to trim
  * @param chars Characters to remove.
  */
-std::string& trim(std::string& str, const std::string& chars = "\t\n\v\f\r ");
+std::string trim(const std::string& str, const std::string& chars = "\t\n\v\f\r ");
 
 class ChangeEUID {
 	public:

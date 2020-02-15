@@ -1,6 +1,9 @@
 #include "Authenticator.h"
 
+#include <cstring>
 #include <iostream>
+#include <random>
+#include <sstream>
 
 #include "hex.h"
 #include "HostId.h"
@@ -10,11 +13,22 @@ static void _delete_dev(fido_dev_t* dev) {
 	fido_dev_free(&dev);
 };
 
+/** Gets a random challenge for the authenticator. */
 static std::array<unsigned char, 32> get_clientdata_hash() {
+	std::random_device rd;
+	size_t rand_size = sizeof(decltype(rd()));
+	std::cout << "Rand size: " << rand_size << "\n";
+
 	std::array<unsigned char, 32> result;
-	for (int i = 0; i < 32; ++i) {
-		/* TODO */
-		result[i] = i;
+	size_t n_fills = 32 / rand_size;
+	size_t n_left = 32 % rand_size;
+	for (size_t i = 0; i < n_fills; ++i) {
+		auto rand_num = rd();
+		memcpy(result.data() + i * rand_size, &rand_num, sizeof(rand_num));
+	}
+	if (n_left) {
+		auto rand_num = rd();
+		memcpy(result.data() + n_fills * rand_size, &rand_num, n_left);
 	}
 	return result;
 }
@@ -38,15 +52,18 @@ Authenticator::Authenticator(const fido_dev_info_t* dev) :
 
 }
 
-bool Authenticator::authenticate(const KeyStore& keystore, bool include_allow_list) {
-	auto delete_assert = [](fido_assert_t* assert) {
-		fido_assert_free(&assert);
-	};
-	std::unique_ptr<fido_assert_t, decltype(delete_assert)> assert(fido_assert_new(), delete_assert);
+#define PIN "XXXX"
+//#define PIN NULL
+
+static void _delete_assert(fido_assert_t* assert) {
+	fido_assert_free(&assert);
+};
+
+Authenticator::Assertion Authenticator::run_get_assert_request(const std::vector<Credential>& allowed_keys, bool include_allow_list) {
+	Authenticator::Assertion assert(fido_assert_new(), _delete_assert);
 	if (!assert) {
 		throw std::runtime_error("fido_assert_new() failed.\n");
 	}
-	auto allowed_keys = keystore.list_keys();
 	/*
 	 * Set the following values:
 	 * -   type;
@@ -58,60 +75,74 @@ bool Authenticator::authenticate(const KeyStore& keystore, bool include_allow_li
 	 */
 	auto r = fido_assert_set_up(assert.get(), FIDO_OPT_TRUE);
 	if (r != FIDO_OK) {
-		std::cerr << "Failed to set UP flag: " << fido_strerr(r) << "\n";
-		return false;
+		std::ostringstream err;
+		err << "Failed to set UP flag: " << fido_strerr(r) << "\n";
+		throw std::runtime_error(err.str());
 	}
 	r = fido_assert_set_uv(assert.get(), FIDO_OPT_TRUE);
 	if (r != FIDO_OK) {
-		std::cerr << "Failed to set UV flag: " << fido_strerr(r) << "\n";
-		return false;
+		std::ostringstream err;
+		err << "Failed to set UV flag: " << fido_strerr(r) << "\n";
+		throw std::runtime_error(err.str());
 	}
 	r = fido_assert_set_rp(assert.get(), "hans");
 	if (r != FIDO_OK) {
-		std::cerr << "Failed to set client data hash: " << fido_strerr(r) << "\n";
-		return false;
+		std::ostringstream err;
+		err << "Failed to set client data hash: " << fido_strerr(r) << "\n";
+		throw std::runtime_error(err.str());
 	}
 	r = fido_assert_set_clientdata_hash(assert.get(), get_clientdata_hash().data(), 32);
 	if (r != FIDO_OK) {
-		std::cerr << "Failed to set client data hash: " << fido_strerr(r) << "\n";
-		return false;
+		std::ostringstream err;
+		err << "Failed to set client data hash: " << fido_strerr(r) << "\n";
+		throw std::runtime_error(err.str());
 	}
 	if (include_allow_list) {
 		for (const auto& cred : allowed_keys) {
 			r = fido_assert_allow_cred(assert.get(), (const unsigned char*)cred.cred_id.data(), cred.cred_id.size());
 			if (r != FIDO_OK) {
-				std::cerr << "Failed to include credential: " << fido_strerr(r) << "\n";
-				return false;
+				std::ostringstream err;
+				err << "Failed to include credential: " << fido_strerr(r) << "\n";
+				throw std::runtime_error(err.str());
 			}
 		}
 	}
 	r = fido_dev_get_assert(_dev.get(), assert.get(), PIN);
+
 	if (r != FIDO_OK) {
-		std::cerr << "Failed to authenticate credential: " << fido_strerr(r) << "\n";
-		return false;
+		std::ostringstream err;
+		err << "Failed to authenticate credential: " << fido_strerr(r) << "\n";
+		throw std::runtime_error(err.str());
 	}
-	//auto assertions = Assertion::Assertion::parseGetAssertionResponse(assert);
-	//for (const auto& a : assertions) {
+	return assert;
+}
+
+
+bool Authenticator::verify_assertion(const Assertion& assert, const std::vector<Credential>& allowed_keys) {
 	for (size_t i = 0; i < fido_assert_count(assert.get()); ++i) {
-		//auto cred_data = a.cred_data;
-		//if (!cred_data) {
-		//continue;
-		//}
-		//std::cout << "Key provided credential: " << Hex::encode(cred_data->cred_id) << "\n";
 		for (auto& k : allowed_keys) {
 			std::cout << "Attempting key" << Hex::encode(k.pubkey) << "\n";
-			auto verify_result = fido_assert_verify(assert.get(), i, COSE_ES256 /* TODO */, k.pubkey.data()/*to_libfido2_key().get()*/);
+			auto verify_result = fido_assert_verify(assert.get(), i, COSE_ES256, k.pubkey.data());
 			if (verify_result == FIDO_OK) {
-			//if (a.verify(k)) {
 				std::cout << "Authentication successful with credential ";
 				std::cout << Hex::encode(k.cred_id) << ", sign count ";
-				//std::cout << a.cred_data->sign_count << "\n";
 				return true;
 			}
 		}
 	}
 	std::cout << "No valid credential found :(\n";
 	return false;
+}
+
+Authenticator::Assertion Authenticator::get_assertion() {
+	return run_get_assert_request({}, false);
+}
+
+bool Authenticator::authenticate(const KeyStore& keystore, bool include_allow_list) {
+	Assertion assert = include_allow_list ?
+		run_get_assert_request(keystore.list_keys(), true) :
+		get_assertion();
+	return verify_assertion(assert, keystore.list_keys());
 }
 
 StoredCredential Authenticator::make_credential(const HostId& host, const UserId& user, bool resident_key) {
