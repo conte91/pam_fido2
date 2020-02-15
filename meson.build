@@ -26,14 +26,13 @@ cryptopp = cpp.find_library('cryptopp')
 #cryptopp = declare_dependency(link_with: cryptopp_lib)
 
 openssl = dependency('openssl')
-util = library('fido_util', ['src/util.cpp', 'src/hex.cpp'], dependencies: [cryptopp])
+util = static_library('fido_util', ['src/util.cpp', 'src/hex.cpp'], dependencies: [cryptopp])
 
-keystore = library('keystore', ['src/Credential.cpp', 'src/Assertion.cpp', 'src/KeyStore.cpp', 'src/UserId.cpp'], dependencies: [cryptopp, fido2, openssl], link_with: [util])
+keystore = static_library('keystore', ['src/Credential.cpp', 'src/Assertion.cpp', 'src/KeyStore.cpp', 'src/UserId.cpp'], dependencies: [cryptopp, fido2, openssl], link_with: [util])
 
-authenticator = library('authenticator', ['src/Authenticator.cpp', 'src/FidoDevList.cpp'], dependencies: [fido2, openssl], link_with: [keystore, util])
+authenticator = static_library('authenticator', ['src/Authenticator.cpp', 'src/FidoDevList.cpp'], dependencies: [fido2, openssl], link_with: [keystore, util])
 executable('test_authenticate', 'src/test_authenticate.cpp', dependencies: [fido2], link_with: [authenticator, keystore, util])
 executable('test_keys', 'src/test_keys.cpp', link_with: [util, keystore])
 
 pam = cpp.find_library('pam')
 pam_fido2 = library('pam_fido2', ['src/pam.cpp'], dependencies: [pam, fido2, openssl], link_with: [authenticator, keystore, util])
-pam_fido2_user = library('pam_fido2_user', ['src/pam_select_user.cpp'], dependencies: [pam, fido2, openssl], link_with: [authenticator, keystore, util])
