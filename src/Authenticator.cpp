@@ -17,7 +17,7 @@ static void _delete_dev(fido_dev_t* dev) {
 static std::array<unsigned char, 32> get_clientdata_hash() {
 	std::random_device rd;
 	size_t rand_size = sizeof(decltype(rd()));
-	std::cout << "Rand size: " << rand_size << "\n";
+	//std::cout << "Rand size: " << rand_size << "\n";
 
 	std::array<unsigned char, 32> result;
 	size_t n_fills = 32 / rand_size;
@@ -121,16 +121,16 @@ Authenticator::Assertion Authenticator::run_get_assert_request(const std::vector
 bool Authenticator::verify_assertion(const Assertion& assert, const std::vector<Credential>& allowed_keys) {
 	for (size_t i = 0; i < fido_assert_count(assert.get()); ++i) {
 		for (auto& k : allowed_keys) {
-			std::cout << "Attempting key" << Hex::encode(k.pubkey) << "\n";
+			//std::cout << "Attempting key" << Hex::encode(k.pubkey) << "\n";
 			auto verify_result = fido_assert_verify(assert.get(), i, COSE_ES256, k.pubkey.data());
 			if (verify_result == FIDO_OK) {
-				std::cout << "Authentication successful with credential ";
-				std::cout << Hex::encode(k.cred_id) << ", sign count ";
+				//std::cout << "Authentication successful with credential ";
+				//std::cout << Hex::encode(k.cred_id) << ", sign count ";
 				return true;
 			}
 		}
 	}
-	std::cout << "No valid credential found :(\n";
+	//std::cout << "No valid credential found :(\n";
 	return false;
 }
 

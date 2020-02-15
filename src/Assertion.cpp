@@ -92,7 +92,7 @@ AuthData::AuthData(const std::string& data) {
 }
 bool Assertion::verify(const Credential& cred) {
 	if (!cred_data) {
-		std::cout << "(No credential data)\n";
+		//std::cout << "(No credential data)\n";
 		return false;
 	}
 	auto credential = _fido_cred_from_authdata(data);

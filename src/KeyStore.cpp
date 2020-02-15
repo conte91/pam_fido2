@@ -31,11 +31,11 @@ std::vector<Credential> KeyStore::list_keys() const {
 		std::string cred_id;
 		std::string key;
 		std::istringstream parse(line);
-		std::cout << "Reading " << line << "\n";
+		//std::cout << "Reading " << line << "\n";
 		parse >> user >> cred_id >> key;
-		std::cout << "User: " << user << ", credential ID: " << cred_id << ", key: " << key << "\n";
+		//std::cout << "User: " << user << ", credential ID: " << cred_id << ", key: " << key << "\n";
 		if (parse.fail()) {
-			std::cout << "Invalid credential file.\n";
+			//std::cout << "Invalid credential file.\n";
 			return {};
 		}
 		if (user != _user_data.username) {
@@ -44,7 +44,7 @@ std::vector<Credential> KeyStore::list_keys() const {
 		std::string decoded_key = Hex::decode(key);
 		std::string decoded_cred_id = Hex::decode(cred_id);
 		if (decoded_key == "" || decoded_cred_id == "") {
-			std::cout << "Invalid credential file.\n";
+			//std::cout << "Invalid credential file.\n";
 			return {};
 		}
 		result.push_back(Credential{decoded_cred_id, decoded_key});
@@ -57,7 +57,7 @@ void KeyStore::add_key(const Credential& cred) {
 	file << "\n";
 	std::string encoded_key = Hex::encode(cred.pubkey);
 	std::string encoded_id = Hex::encode(cred.cred_id);
-	std::cout << "Appending credential " << encoded_id << "(key: " << encoded_key << ") for user " << _user_data.username << "\n";
+	//std::cout << "Appending credential " << encoded_id << "(key: " << encoded_key << ") for user " << _user_data.username << "\n";
 	file << _user_data.username << " " << encoded_id << " " << encoded_key << "\n";
 }
 

@@ -97,6 +97,7 @@ static std::vector<std::string> do_authentication(pam_handle_t* pamh, const char
 		return {};
 	}
 	Authenticator dev_handle{devs.get(0)};
+	debug_print(pamh, PAM_TEXT_INFO, "Use your authentication token to login...");
 	Authenticator::Assertion assert = dev_handle.get_assertion();
 	std::vector<UserId> allowed_users{};
 	if (!pam_user || strlen(pam_user) == 0) {
@@ -104,7 +105,7 @@ static std::vector<std::string> do_authentication(pam_handle_t* pamh, const char
 		setpwent();
 		struct passwd* user_ent;
 		while((user_ent = getpwent())) {
-			debug_print(pamh, PAM_TEXT_INFO, "WOLOLO");
+			//debug_print(pamh, PAM_TEXT_INFO, "WOLOLO");
 			allowed_users.emplace_back(user_ent);
 		}
 		endpwent();
@@ -113,13 +114,13 @@ static std::vector<std::string> do_authentication(pam_handle_t* pamh, const char
 	}
 
 	for (auto& user : allowed_users) {
-		debug_print(pamh, PAM_TEXT_INFO, (std::string("Trying ") +
-				user.username + "...").c_str());
+		//debug_print(pamh, PAM_TEXT_INFO, (std::string("Trying ") +
+		//user.username + "...").c_str());
 		if (dev_handle.verify_assertion(assert, KeyStore{user}.list_keys())) {
 			std::ostringstream msg;
 			msg <<  "Authentication successful for user ";
 			msg << user.username << " :)";
-			debug_print(pamh, PAM_TEXT_INFO, msg.str().c_str());
+			//debug_print(pamh, PAM_TEXT_INFO, msg.str().c_str());
 			result.insert(user.username);
 		}
 	}
@@ -134,7 +135,7 @@ static std::vector<std::string> do_authentication(pam_handle_t* pamh, const char
 	}
 
 	if (result.size() == 0) {
-		debug_print(pamh, PAM_TEXT_INFO, "Authentication failed :(");
+		//debug_print(pamh, PAM_TEXT_INFO, "Authentication failed :(");
 	}
 	return std::vector<std::string>{result.begin(), result.end()};
 }
@@ -184,7 +185,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags,
 			for (int i = 0; i < argc; ++i) {
 				err << "'" << argv[i] << "' ";
 			}
-			debug_print(pamh, PAM_TEXT_INFO, err.str().c_str());
+			//debug_print(pamh, PAM_TEXT_INFO, err.str().c_str());
 			return PAM_AUTH_ERR;
 		}
 		if (set_only) {
@@ -192,21 +193,21 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags,
 			const char* pam_user = nullptr;
 			int result = pam_get_item(pamh, PAM_USER, (const void**)&pam_user);
 			if (result != PAM_SUCCESS) {
-				debug_print(pamh, PAM_TEXT_INFO, "Failed to run GET_ITEM");
+				//debug_print(pamh, PAM_TEXT_INFO, "Failed to run GET_ITEM");
 				return PAM_AUTH_ERR;
 			} else if (pam_user && strlen(pam_user) == 0) {
 				pam_user = nullptr;
 			}
 
 			if (pam_user) {
-				debug_print(pamh, PAM_TEXT_INFO, "User already set.");
+				//debug_print(pamh, PAM_TEXT_INFO, "User already set.");
 				return PAM_AUTH_ERR;
 			}
 
 			auto auth_result = do_authentication(pamh, "");
 			std::string selected_user;
 			if (auth_result.size() == 0) {
-				debug_print(pamh, PAM_TEXT_INFO, "No valid user found.");
+				//debug_print(pamh, PAM_TEXT_INFO, "No valid user found.");
 				return PAM_AUTH_ERR;
 			}
 			if (auth_result.size() == 1) {
@@ -221,18 +222,18 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags,
 
 			char* user_dup = strdup(selected_user.c_str());
 			if (!user_dup) {
-				debug_print(pamh, PAM_TEXT_INFO, "Failed to create string duplicate.");
+				//debug_print(pamh, PAM_TEXT_INFO, "Failed to create string duplicate.");
 				return PAM_AUTH_ERR;
 			}
 			result = pam_set_data(pamh, "fido2", user_dup, _free_user_dup);
 			if (result != PAM_SUCCESS) {
-				debug_print(pamh, PAM_TEXT_INFO, "Failed to store user info.");
+				//debug_print(pamh, PAM_TEXT_INFO, "Failed to store user info.");
 				free(user_dup);
 				return PAM_AUTH_ERR;
 			}
 			result = pam_set_item(pamh, PAM_USER, selected_user.c_str());
 			if (result != PAM_SUCCESS) {
-				debug_print(pamh, PAM_TEXT_INFO, "Failed to store user info.");
+				//debug_print(pamh, PAM_TEXT_INFO, "Failed to store user info.");
 				return PAM_AUTH_ERR;
 			}
 			return PAM_SUCCESS;
@@ -243,7 +244,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags,
 
 			int result = pam_get_data(pamh, "fido2", (const void**)&fido2_user);
 			if (result != PAM_SUCCESS && result != PAM_NO_MODULE_DATA) {
-				debug_print(pamh, PAM_TEXT_INFO, "Failed to run GET_DATA");
+				//debug_print(pamh, PAM_TEXT_INFO, "Failed to run GET_DATA");
 				return PAM_AUTH_ERR;
 			} else if (result == PAM_NO_MODULE_DATA || (fido2_user && strlen(fido2_user) == 0)) {
 				fido2_user = nullptr;
@@ -251,7 +252,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags,
 
 			result = pam_get_item(pamh, PAM_USER, (const void**)&pam_user);
 			if (result != PAM_SUCCESS) {
-				debug_print(pamh, PAM_TEXT_INFO, "Failed to run GET_ITEM");
+				//debug_print(pamh, PAM_TEXT_INFO, "Failed to run GET_ITEM");
 				return PAM_AUTH_ERR;
 			} else if (pam_user && strlen(pam_user) == 0) {
 				pam_user = nullptr;
@@ -268,7 +269,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags,
 			auto auth_result = do_authentication(pamh, pam_user);
 			std::string selected_user;
 			if (auth_result.size() == 0) {
-				debug_print(pamh, PAM_TEXT_INFO, "No valid user found.");
+				//debug_print(pamh, PAM_TEXT_INFO, "No valid user found.");
 				return PAM_AUTH_ERR;
 			}
 			if (auth_result.size() == 1) {
@@ -283,7 +284,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags,
 
 			result = pam_set_item(pamh, PAM_USER, selected_user.c_str());
 			if (result != PAM_SUCCESS) {
-				debug_print(pamh, PAM_TEXT_INFO, "Failed to run SET_ITEM");
+				//debug_print(pamh, PAM_TEXT_INFO, "Failed to run SET_ITEM");
 				return PAM_AUTH_ERR;
 			}
 			return PAM_SUCCESS;
@@ -291,88 +292,21 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	} catch (const std::exception& e) {
 		debug_print(pamh, PAM_TEXT_INFO, e.what());
 	} catch (...) {
-		debug_print(pamh, PAM_TEXT_INFO, "SOMETHING BAD OCCURRED!");
+		debug_print(pamh, PAM_TEXT_INFO, "Unknown error occurred.");
 	}
 	return PAM_AUTH_ERR;
-	#if 0
-		
-	/*
-	t_pusb_options	opts;
-	debug_print char		*service;
-	const char		*user;
-	const char		*tty;
-	char			*conf_file = PUSB_CONF_FILE;
-	int				retval;
-
-	pusb_log_init(&opts);
-	retval = pam_get_item(pamh, PAM_SERVICE,
-			(const void **)(const void *)&service);
-	if (retval != PAM_SUCCESS)
-	{
-		log_error("Unable to retrieve the PAM service name.\n");
-		return (PAM_AUTH_ERR);
-	}
-
-	if (pam_get_user(pamh, &user, NULL) != PAM_SUCCESS || !user || !*user)
-	{
-		log_error("Unable to retrieve the PAM user name.\n");
-		return (PAM_AUTH_ERR);
-	}
-
-	if (argc > 1)
-		if (!strcmp(argv[0], "-c"))
-			conf_file = (char *)argv[1];
-	if (!pusb_conf_init(&opts))
-		return (PAM_AUTH_ERR);
-	if (!pusb_conf_parse(conf_file, &opts, user, service))
-		return (PAM_AUTH_ERR);
-
-	if (!opts.enable)
-	{
-		log_debug("Not enabled, exiting...\n");
-		return (PAM_IGNORE);
-	}
-
-	log_info("pam_usb v%s\n", PUSB_VERSION);
-	log_info("Authentication request for user \"%s\" (%s)\n",
-			user, service);
-
-	if (pam_get_item(pamh, PAM_TTY,
-				(const void **)(const void *)&tty) == PAM_SUCCESS)
-	{
-		if (tty && !strcmp(tty, "ssh"))
-		{
-			log_debug("SSH Authentication, aborting.\n");
-			return (PAM_AUTH_ERR);
-		}
-	}
-	if (!pusb_local_login(&opts, user))
-	{
-		log_error("Access denied.\n");
-		return (PAM_AUTH_ERR);
-	}
-	if (pusb_device_check(&opts, user))
-	{
-		log_info("Access granted.\n");
-		return (PAM_SUCCESS);
-	}
-	log_error("Access denied.\n");
-	return (PAM_AUTH_ERR);
-	*/
-#endif
-	return PAM_SUCCESS;
 }
 
 PAM_EXTERN
 int pam_sm_setcred(pam_handle_t *pamh,int flags,int argc,
 		const char **argv)
 {
-	debug_print(pamh, PAM_PROMPT_ECHO_ON, "Settingcred");
+	//debug_print(pamh, PAM_PROMPT_ECHO_ON, "Settingcred");
 	return (PAM_SUCCESS);
 }
 
 PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char **argv) {
-	debug_print(pamh, PAM_PROMPT_ECHO_ON, "ACCT");
+	//debug_print(pamh, PAM_PROMPT_ECHO_ON, "ACCT");
 	return PAM_SUCCESS;
 }
 

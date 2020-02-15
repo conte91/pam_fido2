@@ -44,17 +44,8 @@ static std::string dump_hex(const std::string& buf) {
 	return dump_hex(buf.data(), buf.size());
 }
 
-static const std::string DEFAULT_CRED_FILE = "./cred.fido2";
-
 static void _register_credential(Authenticator& dev, bool resident_key) {
 	try {
-		std::cout << "File in which to save the credential? [" << DEFAULT_CRED_FILE << "] ";
-		std::string out_file;
-		std::getline(std::cin, out_file);
-		out_file = trim(out_file);
-		if (out_file == "") {
-			out_file = DEFAULT_CRED_FILE;
-		}
 		UserId user{getuid()};
 		HostId host = {"hans", "Computer di simo."};
 		StoredCredential result = dev.make_credential(host, user, resident_key);
@@ -79,7 +70,7 @@ static void do_get_u2f_credential(Authenticator& dev) {
 }
 
 static void do_auth(Authenticator& dev, bool include_allow_list) {
-	if (dev.authenticate(KeyStore{UserId{"simo"}}, include_allow_list)) {
+	if (dev.authenticate(KeyStore{UserId{getuid()}}, include_allow_list)) {
 		std::cout << "Authentication successful :)\n";
 	} else {
 		std::cout << "Authentication failed.\n";
