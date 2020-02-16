@@ -5,6 +5,8 @@
 #include <random>
 #include <sstream>
 
+#include <fido.h>
+
 #include "hex.h"
 #include "HostId.h"
 #include "UserId.h"
@@ -48,12 +50,39 @@ static std::unique_ptr<fido_dev_t, decltype(&_delete_dev)> _open_dev(const fido_
 }
 
 Authenticator::Authenticator(const fido_dev_info_t* dev) :
-	_dev(_open_dev(dev)) {
-
+	_dev{_open_dev(dev)},
+	_pin{},
+	_pin_cb{nullptr},
+	_pin_cb_param{nullptr},
+	_require_pin{false} {
+	auto delete_cbor_info = [](fido_cbor_info_t* c) {
+		fido_cbor_info_free(&c);
+	};
+	/* Check whether the device supports PIN authentication */
+	std::unique_ptr<fido_cbor_info_t, decltype(delete_cbor_info)> ci{
+		fido_cbor_info_new(), delete_cbor_info
+	};
+	int result = fido_dev_get_cbor_info(_dev.get(), ci.get());
+	if (result != FIDO_OK) {
+		std::ostringstream err;
+		err << "Failed to fetch device information: ";
+		err << fido_strerr(result) << "\n";
+		throw std::runtime_error(err.str());
+	}
+	char **option_names = fido_cbor_info_options_name_ptr(ci.get());
+	const bool *option_values = fido_cbor_info_options_value_ptr(ci.get());
+	size_t n_options = fido_cbor_info_options_len(ci.get());
+	for (size_t i = 0; i < n_options; ++i) {
+		if (!strcmp(option_names[i], "clientPin")) {
+			_require_pin = option_values[i];
+		}
+	}
 }
 
-#define PIN "XXXX"
-//#define PIN NULL
+void Authenticator::set_pin_callback(std::function<std::string(void*)> cb, void*param) {
+	_pin_cb = cb;
+	_pin_cb_param = param;
+}
 
 static void _delete_assert(fido_assert_t* assert) {
 	fido_assert_free(&assert);
@@ -64,6 +93,14 @@ Authenticator::Assertion Authenticator::run_get_assert_request(const std::vector
 	if (!assert) {
 		throw std::runtime_error("fido_assert_new() failed.\n");
 	}
+
+	if (_require_pin && _pin == "") {
+		if (!_pin_cb) {
+			throw std::runtime_error("Can't authenticate: A PIN is required.");
+		}
+		_pin = _pin_cb(_pin_cb_param);
+	}
+
 	/*
 	 * Set the following values:
 	 * -   type;
@@ -107,7 +144,7 @@ Authenticator::Assertion Authenticator::run_get_assert_request(const std::vector
 			}
 		}
 	}
-	r = fido_dev_get_assert(_dev.get(), assert.get(), PIN);
+	r = fido_dev_get_assert(_dev.get(), assert.get(), _require_pin ? _pin.c_str() : nullptr);
 
 	if (r != FIDO_OK) {
 		std::ostringstream err;
@@ -183,7 +220,7 @@ StoredCredential Authenticator::make_credential(const HostId& host, const UserId
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to set user option: ") + fido_strerr(r));
 	}
-	r = fido_dev_make_cred(_dev.get(), cred_ptr, PIN);
+	r = fido_dev_make_cred(_dev.get(), cred_ptr, _require_pin ? _pin.c_str() : nullptr);
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to register credential: ") + fido_strerr(r));
 	}
