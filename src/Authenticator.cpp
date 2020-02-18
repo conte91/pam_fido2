@@ -49,12 +49,13 @@ static std::unique_ptr<fido_dev_t, decltype(&_delete_dev)> _open_dev(const fido_
 	return result;
 }
 
-Authenticator::Authenticator(const fido_dev_info_t* dev) :
+Authenticator::Authenticator(const fido_dev_info_t* dev, const HostId& host) :
 	_dev{_open_dev(dev)},
 	_pin{},
 	_pin_cb{nullptr},
 	_pin_cb_param{nullptr},
-	_require_pin{false} {
+	_require_pin{false},
+	_host(host) {
 	auto delete_cbor_info = [](fido_cbor_info_t* c) {
 		fido_cbor_info_free(&c);
 	};
@@ -182,13 +183,20 @@ bool Authenticator::authenticate(const KeyStore& keystore, bool include_allow_li
 	return verify_assertion(assert, keystore.list_keys());
 }
 
-StoredCredential Authenticator::make_credential(const HostId& host, const UserId& user, bool resident_key) {
+StoredCredential Authenticator::make_credential(const UserId& user, bool resident_key) {
 	/* Make sure our credential object is freed on exit. */
 	auto delete_cred = [](fido_cred_t* ptr) {
 		fido_cred_free(&ptr);
 	};
 	std::unique_ptr<fido_cred_t, decltype(delete_cred)> credential(fido_cred_new(), delete_cred);
 	fido_cred_t* cred_ptr = credential.get();
+
+	if (_require_pin && _pin == "") {
+		if (!_pin_cb) {
+			throw std::runtime_error("Can't authenticate: A PIN is required.");
+		}
+		_pin = _pin_cb(_pin_cb_param);
+	}
 
 	/*
 	 * Set the following values:
@@ -208,7 +216,7 @@ StoredCredential Authenticator::make_credential(const HostId& host, const UserId
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to set client data hash: ") + fido_strerr(r));
 	}
-	r = fido_cred_set_rp(cred_ptr, host.domain_name.c_str(), host.name.c_str());
+	r = fido_cred_set_rp(cred_ptr, _host.domain_name.c_str(), _host.name.c_str());
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to set client data hash: ") + fido_strerr(r));
 	}

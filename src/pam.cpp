@@ -29,6 +29,7 @@
 #include <pwd.h>
 
 #include "Authenticator.h"
+#include "Config.h"
 #include "FidoDevList.h"
 #include "util.h"
 
@@ -96,7 +97,8 @@ static std::vector<std::string> do_authentication(pam_handle_t* pamh, const char
 		debug_print(pamh, PAM_TEXT_INFO, "No devices found.");
 		return {};
 	}
-	Authenticator dev_handle{devs.get(0)};
+	Config cfg = Config::read_from_file();
+	Authenticator dev_handle{devs.get(0), cfg.get_host_id()};
 	auto ask_for_pin = [pamh](void* param) {
 		char* pin_resp = converse(pamh, PAM_PROMPT_ECHO_OFF, "Enter PIN: ");
 		std::string result{pin_resp};

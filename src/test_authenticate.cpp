@@ -12,6 +12,7 @@
 
 #include "Assertion.h"
 #include "Authenticator.h"
+#include "Config.h"
 #include "FidoDevList.h"
 #include "KeyStore.h"
 #include "hex.h"
@@ -47,8 +48,7 @@ static std::string dump_hex(const std::string& buf) {
 static void _register_credential(Authenticator& dev, bool resident_key) {
 	try {
 		UserId user{getuid()};
-		HostId host = {"hans", "Computer di simo."};
-		StoredCredential result = dev.make_credential(host, user, resident_key);
+		StoredCredential result = dev.make_credential(user, resident_key);
 		std::cout << "Auth data (len " << result.cred_id.size() << "): " << dump_hex(result.cred_id) << "\n";
 		std::cout << "Client data hash (len " << result.client_data_hash.size() << "): " << dump_hex(result.client_data_hash) << "\n";
 		std::cout << "Cred ID (len " << result.cred_id.size() << "): " << dump_hex(result.cred_id) << "\n";
@@ -128,7 +128,16 @@ int main(void) {
 	}
 	std::cout << "Using device: [" << dev_info_str(selected_dev) << "]\n";
 
-	Authenticator dev_handle{selected_dev};
+	Config conf = Config::read_from_file();
+	Authenticator dev_handle{selected_dev, conf.get_host_id()};
+	auto get_pin = [](void*) {
+		char *pass = getpass("Enter PIN: ");
+		if (!pass) {
+			throw std::runtime_error("Failed to prompt for PIN.");
+		}
+		return std::string(pass);
+	};
+	dev_handle.set_pin_callback(get_pin, NULL);
 
 	struct CallbackData {
 		std::string description;
