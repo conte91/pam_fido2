@@ -1,0 +1,12 @@
+# This is the hostname that will be provided to your authenticator.
+# It will be used from the authenticator to choose the credentials that
+# belong to this device, so it should be unique!
+#
+# It usually is the fully-qualified domain name of the machine
+# (e.g. mycomputer.mydomain.net).
+hostname = hans
+
+# This is the human-readable name that will be provided
+# when you login into the machine. You can set it to
+# whatever you like (e.g. "Work laptop", "Bedroom PC").
+display_name = My computer
