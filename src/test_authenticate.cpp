@@ -163,7 +163,7 @@ int main(void) {
 			std::getline(std::cin, str);
 			std::istringstream in(str);
 			in >> sel;
-			if (in.fail() || sel <= 0 || (size_t)sel > callbacks.size()) {
+			if (in.fail() || sel < 0 || (size_t)sel > callbacks.size()) {
 				std::cout << "Invalid selection.\n";
 				sel = -1;
 			}
