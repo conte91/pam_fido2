@@ -13,6 +13,7 @@
 #include <netdb.h>
 
 #include "util.h"
+
 /**
  * Gets the FQDN of the current machine.
  */
@@ -38,12 +39,8 @@ static std::string _get_fqdn() {
 	if (!info) {
 		return std::string(uts_name.nodename);
 	}
-	for (struct addrinfo *p = info; p; p = p->ai_next) {
-		if (p->ai_canonname && p->ai_canonname[0]) {
-			std::cout << "Hostname " << p->ai_canonname << "\n";
-		}
-	}
 
+	/* Fetch the first FQDN in the list. */
 	std::string result{info->ai_canonname};
 	freeaddrinfo(info);
 	return result;
@@ -83,7 +80,6 @@ Config Config::read_from_file() {
 		}
 		auto item = trim(s.substr(0, equal_pos));
 		auto val = trim(s.substr(equal_pos + 1));
-		std::cout << "Item " << item << "Val " << val << "\n";
 		if (item == "hostname") {
 			if (val == "") {
 				throw ConfigurationParseError(lineno, "Hostname can't be empty.");
