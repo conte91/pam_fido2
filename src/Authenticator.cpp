@@ -123,7 +123,7 @@ Authenticator::Assertion Authenticator::run_get_assert_request(const std::vector
 		err << "Failed to set UV flag: " << fido_strerr(r) << "\n";
 		throw std::runtime_error(err.str());
 	}
-	r = fido_assert_set_rp(assert.get(), "hans");
+	r = fido_assert_set_rp(assert.get(), _host.domain_name.c_str());
 	if (r != FIDO_OK) {
 		std::ostringstream err;
 		err << "Failed to set client data hash: " << fido_strerr(r) << "\n";
