@@ -100,3 +100,8 @@ cp /lib/systemd/system/getty@.service /etc/systemd/system/
 ```
 
  * Reload systemd (or restart your system).
+
+## License
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2. See the `LICENSE` file.
