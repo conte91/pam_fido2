@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "DeviceHandle.h"
 #include "HostId.h"
 #include "KeyStore.h"
 #include "StoredCredential.h"
@@ -13,7 +14,15 @@
 class Authenticator {
 	public:
 	typedef std::unique_ptr<fido_assert_t, void(*)(fido_assert_t*)> Assertion;
-	Authenticator(const fido_dev_info_t* dev, const HostId& host);
+	/**
+	 * Initializes authenticator data, pointing to the given device..
+	 * The actual device will be open and closed as needed.
+	 *
+	 * @param[in] dev_info Pointer to the device metadata. This must remain valid
+	 *                     for the whole lifetime of the Authenticator.
+	 * @param[in] host Information on the host that the device is authenticating on.
+	 */
+	Authenticator(const fido_dev_info_t* dev_info, const HostId& host);
 
 	Assertion get_assertion();
 	Assertion get_assertion(const std::vector<Credential>& allow_list);
@@ -38,9 +47,9 @@ class Authenticator {
 	void set_pin_callback(std::function<std::string(void*)> cb, void* cb_param);
 
 	private:
-	std::unique_ptr<fido_dev_t, void(*)(fido_dev_t*)> _dev;
 	Assertion run_get_assert_request(const std::vector<Credential>& allowed_keys, bool include_allow_list);
 
+	const fido_dev_info_t* _dev_info;
 	std::string _pin;
 	std::function<std::string(void*)> _pin_cb;
 	void* _pin_cb_param;

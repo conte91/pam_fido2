@@ -11,12 +11,6 @@
 #include "HostId.h"
 #include "UserId.h"
 
-static void _delete_dev(fido_dev_t* dev) {
-	/* If the device is already closed, this is a NOP. */
-	fido_dev_close(dev);
-	fido_dev_free(&dev);
-};
-
 /** Gets a random challenge for the authenticator. */
 static std::array<unsigned char, 32> get_clientdata_hash() {
 	std::random_device rd;
@@ -37,27 +31,13 @@ static std::array<unsigned char, 32> get_clientdata_hash() {
 	return result;
 }
 
-static std::unique_ptr<fido_dev_t, decltype(&_delete_dev)> _open_dev(const fido_dev_info_t* dev) {
-
-	std::unique_ptr<fido_dev_t, decltype(&_delete_dev)> result(fido_dev_new(), &_delete_dev);
-	if (!result) {
-		throw std::runtime_error("fido_dev_new() failed.\n");
-	}
-
-	auto dev_path = fido_dev_info_path(dev);
-	if (fido_dev_open(result.get(), dev_path) != FIDO_OK) {
-		throw std::runtime_error(std::string("Couldn't open ") + dev_path + "\n");
-	}
-	return result;
-}
-
-Authenticator::Authenticator(const fido_dev_info_t* dev, const HostId& host) :
-	_dev{_open_dev(dev)},
+Authenticator::Authenticator(const fido_dev_info_t* dev_info, const HostId& host) :
+	_dev_info{dev_info},
 	_pin{},
 	_pin_cb{nullptr},
 	_pin_cb_param{nullptr},
 	_require_pin{false},
-	_host(host) {
+	_host{host} {
 	auto delete_cbor_info = [](fido_cbor_info_t* c) {
 		fido_cbor_info_free(&c);
 	};
@@ -65,7 +45,8 @@ Authenticator::Authenticator(const fido_dev_info_t* dev, const HostId& host) :
 	std::unique_ptr<fido_cbor_info_t, decltype(delete_cbor_info)> ci{
 		fido_cbor_info_new(), delete_cbor_info
 	};
-	int result = fido_dev_get_cbor_info(_dev.get(), ci.get());
+	DeviceHandle dev{_dev_info};
+	int result = fido_dev_get_cbor_info(dev.get(), ci.get());
 	if (result != FIDO_OK) {
 		std::ostringstream err;
 		err << "Failed to fetch device information: ";
@@ -147,7 +128,10 @@ Authenticator::Assertion Authenticator::run_get_assert_request(const std::vector
 			}
 		}
 	}
-	r = fido_dev_get_assert(_dev.get(), assert.get(), _require_pin ? _pin.c_str() : nullptr);
+	{
+		DeviceHandle dev{_dev_info};
+		r = fido_dev_get_assert(dev.get(), assert.get(), _require_pin ? _pin.c_str() : nullptr);
+	}
 
 	if (r != FIDO_OK) {
 		std::ostringstream err;
@@ -230,7 +214,10 @@ StoredCredential Authenticator::make_credential(const UserId& user, bool residen
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to set user option: ") + fido_strerr(r));
 	}
-	r = fido_dev_make_cred(_dev.get(), cred_ptr, _require_pin ? _pin.c_str() : nullptr);
+	{
+		DeviceHandle dev{_dev_info};
+		r = fido_dev_make_cred(dev.get(), cred_ptr, _require_pin ? _pin.c_str() : nullptr);
+	}
 	if (r != FIDO_OK) {
 		throw std::runtime_error(std::string("Failed to register credential: ") + fido_strerr(r));
 	}

@@ -17,7 +17,7 @@ util = static_library('fido_util', ['src/util.cpp', 'src/hex.cpp'])
 
 keystore = static_library('keystore', ['src/Credential.cpp', 'src/Assertion.cpp', 'src/KeyStore.cpp', 'src/UserId.cpp'], dependencies: [fido2, openssl], link_with: [util])
 
-authenticator = static_library('authenticator', ['src/Authenticator.cpp', 'src/Config.cpp', 'src/FidoDevList.cpp'], dependencies: [fido2, openssl], link_with: [keystore, util])
+authenticator = static_library('authenticator', ['src/Authenticator.cpp', 'src/Config.cpp', 'src/DeviceHandle.cpp', 'src/FidoDevList.cpp'], dependencies: [fido2, openssl], link_with: [keystore, util])
 executable('fido2_tool', 'src/fido2_tool.cpp', dependencies: [fido2], link_with: [authenticator, keystore, util])
 executable('test_keys', 'src/test_keys.cpp', link_with: [util, keystore])
 
