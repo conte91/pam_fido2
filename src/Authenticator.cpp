@@ -12,6 +12,8 @@
 #include "UserId.h"
 
 static void _delete_dev(fido_dev_t* dev) {
+	/* If the device is already closed, this is a NOP. */
+	fido_dev_close(dev);
 	fido_dev_free(&dev);
 };
 
