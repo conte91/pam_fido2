@@ -19,7 +19,7 @@ keystore = static_library('keystore', ['src/Credential.cpp', 'src/Assertion.cpp'
 
 authenticator = static_library('authenticator', ['src/Authenticator.cpp', 'src/Config.cpp', 'src/DeviceHandle.cpp', 'src/FidoDevList.cpp'], dependencies: [fido2, openssl], link_with: [keystore, util])
 executable('fido2_tool', 'src/fido2_tool.cpp', dependencies: [fido2], link_with: [authenticator, keystore, util])
-executable('test_keys', 'src/test_keys.cpp', link_with: [util, keystore])
+executable('test_keys', 'src/test_keys.cpp', dependencies: [fido2], link_with: [util, keystore])
 
 pam = cpp.find_library('pam')
 pam_fido2 = library('pam_fido2', ['src/pam.cpp'], dependencies: [pam, fido2, openssl], link_with: [authenticator, keystore, util])
