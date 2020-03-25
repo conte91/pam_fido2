@@ -11,6 +11,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "Credential.h"
 #include "hex.h"
@@ -22,6 +23,16 @@ KeyStore::KeyStore(const UserId& user_data) :
 
 std::vector<Credential> KeyStore::list_keys() const {
 	ChangeEUID euid_change{_user_data.user_id};
+	auto key_filename = get_user_keys_file();
+
+	/* If the key file does not exist, just return an empty vector. */
+	{
+		struct stat foo_stat;
+		if (stat(key_filename.c_str(), &foo_stat)) {
+			return {};
+		}
+	}
+
 	std::ifstream file(get_user_keys_file());
 	if (!file.good()) {
 		throw std::runtime_error("Failed to open " + get_user_keys_file() + " for reading.\n");
