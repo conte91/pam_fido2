@@ -20,6 +20,7 @@ class KeyStore {
 	UserId _user_data;
 	std::string get_user_config_path() const;
 	std::string get_user_keys_file() const;
+	void create_keystore_directory() const;
 };
 
 #endif // __KEY_STORE_H
