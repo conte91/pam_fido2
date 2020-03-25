@@ -1,0 +1,9 @@
+Name: FIDO2 authentication
+Default: yes
+Priority: 300
+Auth-Type: Primary
+Auth:
+	[success=end default=ignore]	pam_fido2.so
+Auth-Initial:
+	[success=end default=ignore]	pam_fido2.so
+
