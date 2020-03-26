@@ -4,8 +4,6 @@
 #include <iostream>
 #include <sstream>
 
-#include <cryptopp/hex.h>
-
 std::string Hex::decode(const std::string& input) {
 	std::string decoded;
 	if (input.size() % 2 != 0) {
