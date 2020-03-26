@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Update the PAM policies to exclude the FIDO2 module.
+pam-auth-update --package

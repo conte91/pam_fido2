@@ -1,0 +1,39 @@
+#!/bin/sh -x
+
+set -e
+
+export PACKAGE_VERSION="0.1.@VCS_TAG@"
+export PACKAGE_MAINTAINER="Simone Baratta <simone <at> ttclabs <dot> me>"
+export PACKAGE_DESC="FIDO2 PAM module, for secure passwordless logins."
+export PACKAGE_ARCH="amd64"
+export PACKAGE_URL="https://github.com/Conte91/pam_fido2"
+
+export SOURCE_DIR=$(readlink -f "$1")
+export BUILD_DIR=$(readlink -f "$2")
+
+export PKG_TREE_DIR="${BUILD_DIR}/dist/ubuntu/pkg_tree"
+
+mkdir -p "${PKG_TREE_DIR}"
+cd "${PKG_TREE_DIR}"
+mkdir -p "usr/lib/x86_64-linux-gnu/security"
+install -m755 "${BUILD_DIR}/libpam_fido2.so" "usr/lib/x86_64-linux-gnu/security/pam_fido2.so"
+mkdir -p "usr/bin"
+install -m755 "${BUILD_DIR}/fido2_tool" "usr/bin/fido2_tool"
+mkdir -p "usr/share/pam-configs"
+install -m644 "${SOURCE_DIR}/etc/pam_config" "usr/share/pam-configs/fido2"
+mkdir -p "etc/fido2"
+install -m644 "${SOURCE_DIR}/etc/config" "etc/fido2/config"
+fpm \
+	--after-install "${SOURCE_DIR}/dist/ubuntu/after-install" --after-remove "${SOURCE_DIR}/dist/ubuntu/after-remove" \
+	-s dir -t deb \
+	-n pam-fido2 \
+	-v "${PACKAGE_VERSION}" \
+	--description "${PACKAGE_DESC}" \
+	-a "${PACKAGE_ARCH}" \
+	-m "${PACKAGE_MAINTAINER}" \
+	-d libudev1 -d libcbor0 -d openssl \
+	--category admin \
+	--license GPL-2 \
+	.
+
+mv pam-fido2*.deb ${BUILD_DIR}/pam-fido2_ubuntu.deb
