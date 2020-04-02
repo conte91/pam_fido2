@@ -3,27 +3,13 @@
 set -e
 set -x
 
-CONTAINER=shiftcrypto/firmware_v2:14
+CONTAINER=ttclabs/ubuntu_pam_fido2
 
-if [ "$1" == "pull" ] ; then
-	docker pull "$CONTAINER"
-	exit 0
-fi
+time docker pull "$CONTAINER"
 
-TARGET_BRANCH=master
-if [ "${TRAVIS_PULL_REQUEST}" != "false" ] ; then
-	TARGET_BRANCH=${TRAVIS_BRANCH}
-fi
-
-# Fetch origin/master so that we can diff when checking coding style.
-git remote set-branches --add origin ${TARGET_BRANCH}
-git fetch origin
-
-TARGET_BRANCH=origin/${TARGET_BRANCH}
-
-docker run -e TARGET_BRANCH="${TARGET_BRANCH}" \
+time docker run -e TARGET_BRANCH="${TARGET_BRANCH}" \
 	--cap-add SYS_PTRACE \
-	--volume ${TRAVIS_BUILD_DIR}:/bitbox02-firmware/ \
-	--workdir /bitbox02-firmware \
-	${CONTAINER} \
-	bash -c "./.ci/ci"
+	--volume ${TRAVIS_BUILD_DIR}:/app/ \
+	--workdir /app \
+	"${CONTAINER}" \
+	bash -c "/meson/meson-0.54.0rc1/meson.py ubuntu_build && ninja -C ubuntu_build pam-fido2_ubuntu.deb"
